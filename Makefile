@@ -19,7 +19,7 @@ info: ## Show detailed description of all targets
 	@echo "  🔧 BUILD & RUN"
 	@echo "  ────────────────────────────────────────────────────────────"
 	@echo "  build            Собрать бинарник в ./bin/$(APP_NAME)"
-	@echo "  run              Запустить приложение через docker-compose"
+	@echo "  run              Запустить приложение через docker compose"
 	@echo "  docker-up        Запустить все сервисы в фоне"
 	@echo "  docker-down      Остановить все сервисы"
 	@echo ""
@@ -57,14 +57,14 @@ build: ## Build the application binary
 	CGO_ENABLED=0 go build -o $(BUILD_DIR)/$(APP_NAME) ./cmd/server
 	@echo "Done: $(BUILD_DIR)/$(APP_NAME)"
 
-run: ## Run the application with docker-compose
-	docker-compose up --build
+run: ## Run the application with docker compose
+	docker compose up --build
 
-docker-up: ## Start all services with docker-compose
-	docker-compose up -d --build
+docker-up: ## Start all services with docker compose
+	docker compose up -d --build
 
 docker-down: ## Stop all services
-	docker-compose down
+	docker compose down
 
 generate: ## Install mockgen and generate mocks from interfaces
 	@echo "Installing mockgen..."
@@ -122,13 +122,13 @@ clean: ## Clean build and coverage artifacts
 	@echo "Done"
 
 db-up: ## Start PostgreSQL
-	docker-compose up -d postgres
+	docker compose up -d postgres
 
 db-down: ## Stop PostgreSQL
-	docker-compose stop postgres
+	docker compose stop postgres
 
 db-test-up: ## Start test PostgreSQL on port 5433
-	docker-compose -f docker-compose.test.yml up -d
+	docker compose -f docker compose.test.yml up -d
 
 db-test-down: ## Stop test PostgreSQL
-	docker-compose -f docker-compose.test.yml down
+	docker compose -f docker compose.test.yml down
