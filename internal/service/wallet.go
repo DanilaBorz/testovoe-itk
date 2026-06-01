@@ -64,7 +64,7 @@ func (s *walletService) ProcessOperation(ctx context.Context, req model.Operatio
 		return 0, err
 	}
 
-	s.logger.Info("operation processed",
+	s.logger.Debug("operation processed",
 		zap.String("wallet_id", req.WalletID.String()),
 		zap.String("operation", string(req.OperationType)),
 		zap.Int64("amount", req.Amount),

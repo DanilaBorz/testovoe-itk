@@ -26,7 +26,7 @@ func setupHandlerTest(t *testing.T) (*mocks.MockWalletService, *chi.Mux) {
 
 	ctrl := gomock.NewController(t)
 	mockSvc := mocks.NewMockWalletService(ctrl)
-	logger, _ := zap.NewDevelopment()
+	logger := zap.NewNop()
 	h := handler.NewWalletHandler(mockSvc, logger)
 
 	r := chi.NewRouter()

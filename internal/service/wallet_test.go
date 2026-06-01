@@ -22,7 +22,7 @@ func setupServiceTest(t *testing.T) (*mocks.MockWalletRepository, service.Wallet
 
 	ctrl := gomock.NewController(t)
 	mockRepo := mocks.NewMockWalletRepository(ctrl)
-	logger, _ := zap.NewDevelopment()
+	logger := zap.NewNop()
 	svc := service.NewWalletService(mockRepo, logger)
 
 	return mockRepo, svc

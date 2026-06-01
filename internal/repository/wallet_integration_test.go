@@ -33,7 +33,7 @@ func (s *WalletRepositoryTestSuite) SetupSuite() {
 	err = pool.Ping(context.Background())
 	require.NoError(s.T(), err)
 
-	logger, _ := zap.NewDevelopment()
+	logger := zap.NewNop()
 
 	s.pool = pool
 	s.logger = logger
@@ -127,8 +127,8 @@ func (s *WalletRepositoryTestSuite) TestConcurrentOperations() {
 	_, err := s.repo.UpdateBalance(context.Background(), walletID, 0)
 	require.NoError(s.T(), err)
 
-	// Запуск 100 конкурентных операций
-	const ops = 100
+	// Запуск 1000 конкурентных операций по существующему кошельку
+	const ops = 1000
 	errs := make(chan error, ops)
 
 	for i := 0; i < ops; i++ {
@@ -143,10 +143,35 @@ func (s *WalletRepositoryTestSuite) TestConcurrentOperations() {
 		require.NoError(s.T(), err)
 	}
 
-	// Итоговый баланс должен быть 100 * 10 = 1000
+	// Итоговый баланс должен быть 1000 * 10 = 10000
 	balance, err := s.repo.GetBalance(context.Background(), walletID)
 	require.NoError(s.T(), err)
-	assert.Equal(s.T(), int64(1000), balance)
+	assert.Equal(s.T(), int64(10000), balance)
+}
+
+func (s *WalletRepositoryTestSuite) TestConcurrentCreateWithDeposits() {
+	walletID := uuid.New()
+
+	// Запуск 1000 конкурентных пополнений по новому кошельку
+	const ops = 1000
+	errs := make(chan error, ops)
+
+	for i := 0; i < ops; i++ {
+		go func() {
+			_, err := s.repo.UpdateBalance(context.Background(), walletID, 10)
+			errs <- err
+		}()
+	}
+
+	for i := 0; i < ops; i++ {
+		err := <-errs
+		require.NoError(s.T(), err)
+	}
+
+	// Кошелек должен быть создан один раз, а все пополнения должны попасть в баланс
+	balance, err := s.repo.GetBalance(context.Background(), walletID)
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), int64(10000), balance)
 }
 
 func TestWalletRepositorySuite(t *testing.T) {

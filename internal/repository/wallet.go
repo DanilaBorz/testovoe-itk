@@ -46,97 +46,94 @@ func (r *WalletRepo) GetBalance(ctx context.Context, id uuid.UUID) (int64, error
 }
 
 func (r *WalletRepo) UpdateBalance(ctx context.Context, id uuid.UUID, amount int64) (newBalance int64, err error) {
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		r.logger.Error("failed to begin transaction",
-			zap.String("wallet_id", id.String()),
-			zap.Error(err),
-		)
-		return 0, err
-	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback(ctx) //nolint:errcheck — транзакция может быть уже закрыта
-		}
-	}()
-
-	// Попытка заблокировать существующую запись кошелька
-	var currentBalance int64
-	query := `SELECT balance FROM wallets WHERE id = $1 FOR UPDATE`
-	err = tx.QueryRow(ctx, query, id).Scan(&currentBalance)
-
-	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
-			r.logger.Error("failed to lock wallet row",
-				zap.String("wallet_id", id.String()),
-				zap.Error(err),
-			)
-			return 0, err
-		}
-
-		// Кошелек не существует — создаем его с указанной суммой (только для DEPOSIT)
-		if amount < 0 {
-			return 0, apperrors.ErrWalletNotFound
-		}
-
-		insertQuery := `INSERT INTO wallets (id, balance) VALUES ($1, $2)`
-		_, err = tx.Exec(ctx, insertQuery, id, amount)
-		if err != nil {
-			r.logger.Error("failed to create wallet",
-				zap.String("wallet_id", id.String()),
-				zap.Error(err),
-			)
-			return 0, err
-		}
-
-		err = tx.Commit(ctx)
-		if err != nil {
-			r.logger.Error("failed to commit transaction after wallet creation",
-				zap.String("wallet_id", id.String()),
-				zap.Error(err),
-			)
-			return 0, err
-		}
-
-		r.logger.Info("wallet created",
-			zap.String("wallet_id", id.String()),
-			zap.Int64("initial_balance", amount),
-		)
-
-		return amount, nil
+	if amount >= 0 {
+		return r.deposit(ctx, id, amount)
 	}
 
-	// Кошелек существует — обновляем баланс
-	newBalance = currentBalance + amount
-	if newBalance < 0 {
-		return 0, apperrors.ErrInsufficientFunds
-	}
+	return r.withdraw(ctx, id, -amount)
+}
 
-	updateQuery := `UPDATE wallets SET balance = $1, updated_at = NOW() WHERE id = $2`
-	_, err = tx.Exec(ctx, updateQuery, newBalance, id)
-	if err != nil {
-		r.logger.Error("failed to update wallet balance",
+func (r *WalletRepo) deposit(ctx context.Context, id uuid.UUID, amount int64) (int64, error) {
+	query := `
+		INSERT INTO wallets (id, balance)
+		VALUES ($1, $2)
+		ON CONFLICT (id) DO UPDATE
+		SET balance = wallets.balance + EXCLUDED.balance,
+			updated_at = NOW()
+		RETURNING balance
+	`
+
+	var newBalance int64
+	if err := r.pool.QueryRow(ctx, query, id, amount).Scan(&newBalance); err != nil {
+		r.logger.Error("failed to deposit wallet balance",
 			zap.String("wallet_id", id.String()),
-			zap.Int64("new_balance", newBalance),
+			zap.Int64("amount", amount),
 			zap.Error(err),
 		)
 		return 0, err
 	}
 
-	err = tx.Commit(ctx)
-	if err != nil {
-		r.logger.Error("failed to commit transaction after balance update",
-			zap.String("wallet_id", id.String()),
-			zap.Error(err),
-		)
-		return 0, err
-	}
-
-	r.logger.Info("wallet balance updated",
+	r.logger.Debug("wallet balance deposited",
 		zap.String("wallet_id", id.String()),
 		zap.Int64("delta", amount),
 		zap.Int64("new_balance", newBalance),
 	)
 
 	return newBalance, nil
+}
+
+func (r *WalletRepo) withdraw(ctx context.Context, id uuid.UUID, amount int64) (int64, error) {
+	query := `
+		UPDATE wallets
+		SET balance = balance - $2,
+			updated_at = NOW()
+		WHERE id = $1 AND balance >= $2
+		RETURNING balance
+	`
+
+	var newBalance int64
+	err := r.pool.QueryRow(ctx, query, id, amount).Scan(&newBalance)
+	if err == nil {
+		r.logger.Debug("wallet balance withdrawn",
+			zap.String("wallet_id", id.String()),
+			zap.Int64("delta", -amount),
+			zap.Int64("new_balance", newBalance),
+		)
+
+		return newBalance, nil
+	}
+
+	if !errors.Is(err, pgx.ErrNoRows) {
+		r.logger.Error("failed to withdraw wallet balance",
+			zap.String("wallet_id", id.String()),
+			zap.Int64("amount", amount),
+			zap.Error(err),
+		)
+		return 0, err
+	}
+
+	exists, err := r.walletExists(ctx, id)
+	if err != nil {
+		r.logger.Error("failed to check wallet existence after withdraw",
+			zap.String("wallet_id", id.String()),
+			zap.Error(err),
+		)
+		return 0, err
+	}
+	if !exists {
+		return 0, apperrors.ErrWalletNotFound
+	}
+
+	return 0, apperrors.ErrInsufficientFunds
+}
+
+func (r *WalletRepo) walletExists(ctx context.Context, id uuid.UUID) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM wallets WHERE id = $1)`
+
+	var exists bool
+	if err := r.pool.QueryRow(ctx, query, id).Scan(&exists); err != nil {
+		return false, err
+	}
+
+	return exists, nil
 }
