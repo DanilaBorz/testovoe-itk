@@ -3,8 +3,8 @@ package main
 import (
 	"go.uber.org/zap"
 
-	"https://github.com/DanilaBorz/testovoe-itk/internal/config"
-	"https://github.com/DanilaBorz/testovoe-itk/internal/server"
+	"github.com/DanilaBorz/testovoe-itk/internal/config"
+	"github.com/DanilaBorz/testovoe-itk/internal/server"
 )
 
 func main() {

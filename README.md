@@ -55,12 +55,12 @@ REST-сервис для управления кошельками с подде
 
 | Компонент | Технология |
 |-----------|-----------|
-| **Язык** | Go 1.22 |
-| **HTTP-роутер** | [chi](https://github.com/go-chi/chi) — лёгкий, производительный, idiomatic |
+| **Язык** | Go 1.25 |
+| **HTTP-роутер** | [chi](https://github.com/go-chi/chi) — лёгкий, производительный, идиоматичный |
 | **База данных** | PostgreSQL 16 |
 | **Драйвер БД** | [pgx v5](https://github.com/jackc/pgx) — пул соединений, нативная поддержка PostgreSQL |
 | **Логирование** | [zap](https://github.com/uber-go/zap) — структурированное логирование |
-| **Контейнеризация** | Docker + docker-compose |
+| **Контейнеризация** | Docker + Docker Compose |
 | **Тестирование** | testify + gomock (go.uber.org/mock) |
 | **Конфигурация** | godotenv + переменные окружения |
 
@@ -145,7 +145,7 @@ repository → WalletRepo (структура, не импортирует servi
 ### 1. Запуск приложения
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 Сервер будет доступен на `http://localhost:8080`.
@@ -175,39 +175,39 @@ curl http://localhost:8080/api/v1/wallets/550e8400-e29b-41d4-a716-446655440000
 
 ## 🧪 Тестирование
 
-### Unit-тесты (без БД)
+### Модульные тесты (без БД)
 
 ```bash
 make test-unit
 ```
 
-Проверяют handler и service через моки. Покрывают: успешные операции, валидацию, ошибки, неверные методы.
+Проверяют обработчики и сервис через моки. Покрывают: успешные операции, валидацию, ошибки, неверные методы.
 
 ### Интеграционные тесты (с реальной БД)
 
 ```bash
-# 1. Поднять тестовую PostgreSQL
-make db-test-up
-
-# 2. Запустить интеграционные тесты
 make test-integration
-
-# 3. Остановить БД
-make db-test-down
 ```
 
-Проверяют repository: создание кошелька, DEPOSIT, WITHDRAW, недостаточно средств, **100 конкурентных операций**.
+Цель сама поднимает тестовую PostgreSQL на `localhost:5433`, ждёт готовности и очищает контейнер после завершения тестов.
+
+Проверяют репозиторий: создание кошелька, DEPOSIT, WITHDRAW, недостаточно средств, **100 конкурентных операций**.
+
+### Все тесты
+
+```bash
+make test-all
+```
+
+Генерирует моки, запускает модульные и интеграционные тесты.
 
 ### Покрытие
 
 ```bash
-# Unit-тесты с покрытием
-make coverage-unit
-
-# Все тесты + HTML-отчёт
-make db-test-up && make coverage-html
-# открыть coverage/coverage.html в браузере
+make coverage
 ```
+
+Запускает все тесты, поднимает и очищает тестовую PostgreSQL, объединяет профили модульных и интеграционных тестов и печатает общий процент покрытия.
 
 ---
 
@@ -217,11 +217,11 @@ make db-test-up && make coverage-html
 make help        # Показать краткую справку по целям
 make info        # Показать подробное описание всех целей
 make build       # Собрать бинарник
-make run         # Запустить через docker-compose
-make test        # Unit-тесты
-make test-all    # Все тесты (unit + integration)
+make run         # Запустить через Docker Compose
+make test-unit   # Модульные тесты
+make test-integration # Интеграционные тесты с тестовой PostgreSQL
+make test-all    # Все тесты (модульные + интеграционные)
 make coverage    # Все тесты + объединённый отчёт о покрытии
-make coverage-html # Все тесты + HTML-отчёт
 make generate    # Сгенерировать моки
 make lint        # Запустить golangci-lint
 make clean       # Очистить артефакты
@@ -234,16 +234,16 @@ make clean       # Очистить артефакты
 | Улучшение | Описание |
 |-----------|----------|
 | **Чистая архитектура** | Handler → Service → Repository через интерфейсы |
-| **Структурированное логирование** | Zap logger с уровнями info/warn/error и контекстными полями |
+| **Структурированное логирование** | Логгер Zap с уровнями info/warn/error и контекстными полями |
 | **Отдельный пакет ошибок** | `internal/errors` — handler не зависит от repository |
-| **Graceful shutdown** | Корректное завершение по SIGINT/SIGTERM |
+| **Корректное завершение** | Завершение по SIGINT/SIGTERM |
 | **Mockgen + gomock** | Автоматическая генерация моков через `make generate` |
 | **Makefile** | Цели для сборки, тестов, покрытия, линтинга |
-| **Race detector** | Все тесты запускаются с `-race` |
-| **Покрытие кода** | `make coverage-html` — HTML-отчёт в браузере |
+| **Детектор гонок** | Все тесты запускаются с `-race` |
+| **Покрытие кода** | `make coverage` — суммарный отчёт по модульным и интеграционным тестам |
 | **Валидация конфига** | Проверка обязательных переменных окружения при старте |
 | **Интеграционный тест на конкурентность** | 100 горутин на один кошелёк — проверка `SELECT FOR UPDATE` |
-| **Docker-оптимизация** | Многоступенчатая сборка (alpine), healthcheck для БД |
+| **Docker-оптимизация** | Многоступенчатая сборка (alpine), проверка здоровья БД |
 
 ---
 
@@ -252,10 +252,10 @@ make clean       # Очистить артефакты
 Все переменные считываются из файла `config.env`:
 
 ```env
-# Server
+# Сервер
 SERVER_PORT=8080
 
-# Database
+# База данных
 DB_HOST=postgres
 DB_PORT=5432
 DB_USER=wallet_user
@@ -263,11 +263,11 @@ DB_PASSWORD=wallet_pass
 DB_NAME=wallet_db
 DB_SSLMODE=disable
 
-# Pool
+# Пул соединений
 DB_MAX_CONNS=50
 DB_MIN_CONNS=10
 
-# Logging
+# Логирование
 LOG_LEVEL=info
 ```
 
@@ -279,7 +279,7 @@ LOG_LEVEL=info
 ├── cmd/server/main.go              # Точка входа
 ├── internal/
 │   ├── config/config.go            # Конфигурация из config.env
-│   ├── errors/errors.go            # Общие ошибки (wallet not found, insufficient funds)
+│   ├── errors/errors.go            # Общие ошибки (кошелек не найден, недостаточно средств)
 │   ├── model/wallet.go             # Модели данных
 │   ├── mocks/
 │   │   ├── wallet_repository.go    # Сгенерированный мок репозитория
@@ -293,11 +293,10 @@ LOG_LEVEL=info
 │   ├── handler/
 │   │   ├── wallet.go               # HTTP-обработчики
 │   │   └── wallet_test.go
-│   └── server/server.go            # HTTP-сервер + graceful shutdown
+│   └── server/server.go            # HTTP-сервер + корректное завершение
 ├── migrations/001_init.sql         # Создание таблицы wallets
 ├── Dockerfile                      # Многоступенчатая сборка
-├── docker-compose.yml              # app + postgres
-├── docker-compose.test.yml         # Тестовая PostgreSQL
+├── docker-compose.yml              # приложение + основная/тестовая PostgreSQL
 ├── config.env                      # Переменные окружения
 ├── Makefile                        # Цели для сборки, тестов и т.д.
 └── go.mod

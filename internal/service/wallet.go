@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"https://github.com/DanilaBorz/testovoe-itk/internal/model"
+	"github.com/DanilaBorz/testovoe-itk/internal/model"
 )
 
 // WalletRepository определяет интерфейс для доступа к данным кошелька.

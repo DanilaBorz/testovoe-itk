@@ -14,10 +14,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
-	"https://github.com/DanilaBorz/testovoe-itk/internal/config"
-	"https://github.com/DanilaBorz/testovoe-itk/internal/handler"
-	"https://github.com/DanilaBorz/testovoe-itk/internal/repository"
-	"https://github.com/DanilaBorz/testovoe-itk/internal/service"
+	"github.com/DanilaBorz/testovoe-itk/internal/config"
+	"github.com/DanilaBorz/testovoe-itk/internal/handler"
+	"github.com/DanilaBorz/testovoe-itk/internal/repository"
+	"github.com/DanilaBorz/testovoe-itk/internal/service"
 )
 
 // Server представляет HTTP-сервер.
@@ -64,7 +64,6 @@ func New(cfg *config.Config, logger *zap.Logger) (*Server, error) {
 	// Настройка роутера
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
-	router.Use(middleware.RealIP)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(30 * time.Second))
@@ -94,7 +93,7 @@ func (s *Server) Start() error {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Graceful shutdown
+	// Корректное завершение
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 

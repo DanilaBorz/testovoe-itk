@@ -15,10 +15,10 @@ import (
 	"go.uber.org/mock/gomock"
 	"go.uber.org/zap"
 
-	apperrors "https://github.com/DanilaBorz/testovoe-itk/internal/errors"
-	"https://github.com/DanilaBorz/testovoe-itk/internal/handler"
-	"https://github.com/DanilaBorz/testovoe-itk/internal/mocks"
-	"https://github.com/DanilaBorz/testovoe-itk/internal/model"
+	apperrors "github.com/DanilaBorz/testovoe-itk/internal/errors"
+	"github.com/DanilaBorz/testovoe-itk/internal/handler"
+	"github.com/DanilaBorz/testovoe-itk/internal/mocks"
+	"github.com/DanilaBorz/testovoe-itk/internal/model"
 )
 
 func setupHandlerTest(t *testing.T) (*mocks.MockWalletService, *chi.Mux) {

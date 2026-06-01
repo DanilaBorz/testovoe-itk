@@ -1,49 +1,47 @@
-.PHONY: help info build run test test-unit test-integration test-all lint clean generate \
+.PHONY: help info build run test-unit test-integration test-all lint clean generate \
         db-up db-down db-test-up db-test-down docker-up docker-down \
-        coverage coverage-unit coverage-integration coverage-html
+        coverage
 
 APP_NAME := wallet-app
 BUILD_DIR := ./bin
 COVERAGE_DIR := ./coverage
-MOCKGEN := $(GOPATH)/bin/mockgen
+MOCKGEN_VERSION := v0.6.0
+MOCKGEN := $(shell go env GOPATH)/bin/mockgen
+SERVICE_PACKAGE := github.com/DanilaBorz/testovoe-itk/internal/service
 
-help: ## Show this help
+help: ## Показать краткую справку
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-info: ## Show detailed description of all targets
+info: ## Показать подробное описание целей
 	@echo "═══════════════════════════════════════════════════════════════"
-	@echo "  $(APP_NAME) — Makefile targets"
+	@echo "  $(APP_NAME) — цели Makefile"
 	@echo "═══════════════════════════════════════════════════════════════"
 	@echo ""
-	@echo "  🔧 BUILD & RUN"
+	@echo "  🔧 СБОРКА И ЗАПУСК"
 	@echo "  ────────────────────────────────────────────────────────────"
 	@echo "  build            Собрать бинарник в ./bin/$(APP_NAME)"
 	@echo "  run              Запустить приложение через docker compose"
 	@echo "  docker-up        Запустить все сервисы в фоне"
 	@echo "  docker-down      Остановить все сервисы"
 	@echo ""
-	@echo "  🧪 TESTS"
+	@echo "  🧪 ТЕСТЫ"
 	@echo "  ────────────────────────────────────────────────────────────"
-	@echo "  test             Запустить unit-тесты (по умолчанию)"
-	@echo "  test-unit        Запустить unit-тесты (handler + service)"
-	@echo "  test-integration Запустить интеграционные тесты (нужна БД)"
+	@echo "  test-unit        Запустить модульные тесты (обработчики + сервисы)"
+	@echo "  test-integration Запустить интеграционные тесты (тестовая БД поднимется автоматически)"
 	@echo "  test-all         Сгенерировать моки и запустить все тесты"
 	@echo ""
-	@echo "  📊 COVERAGE"
+	@echo "  📊 ПОКРЫТИЕ"
 	@echo "  ────────────────────────────────────────────────────────────"
-	@echo "  coverage-unit    Unit-тесты с отчётом о покрытии"
-	@echo "  coverage-int     Интеграционные тесты с отчётом о покрытии"
-	@echo "  coverage         Все тесты + объединённый отчёт"
-	@echo "  coverage-html    Все тесты + HTML-отчёт (открыть в браузере)"
+	@echo "  coverage         Все тесты + суммарный отчёт о покрытии"
 	@echo ""
-	@echo "  🛠  UTILITIES"
+	@echo "  🛠  УТИЛИТЫ"
 	@echo "  ────────────────────────────────────────────────────────────"
 	@echo "  generate         Установить mockgen и сгенерировать моки"
 	@echo "  lint             Запустить golangci-lint"
 	@echo "  clean            Очистить артефакты сборки и покрытия"
 	@echo ""
-	@echo "  🗄  DATABASE"
+	@echo "  🗄  БАЗА ДАННЫХ"
 	@echo "  ────────────────────────────────────────────────────────────"
 	@echo "  db-up            Запустить PostgreSQL (основной)"
 	@echo "  db-down          Остановить PostgreSQL"
@@ -51,84 +49,78 @@ info: ## Show detailed description of all targets
 	@echo "  db-test-down     Остановить тестовую PostgreSQL"
 	@echo ""
 
-build: ## Build the application binary
-	@echo "Building $(APP_NAME)..."
+build: ## Собрать бинарный файл приложения
+	@echo "Сборка $(APP_NAME)..."
 	@mkdir -p $(BUILD_DIR)
 	CGO_ENABLED=0 go build -o $(BUILD_DIR)/$(APP_NAME) ./cmd/server
-	@echo "Done: $(BUILD_DIR)/$(APP_NAME)"
+	@echo "Готово: $(BUILD_DIR)/$(APP_NAME)"
 
-run: ## Run the application with docker compose
+run: ## Запустить приложение через docker compose
 	docker compose up --build
 
-docker-up: ## Start all services with docker compose
+docker-up: ## Запустить все сервисы через docker compose
 	docker compose up -d --build
 
-docker-down: ## Stop all services
+docker-down: ## Остановить все сервисы
 	docker compose down
 
-generate: ## Install mockgen and generate mocks from interfaces
-	@echo "Installing mockgen..."
-	@go install go.uber.org/mock/mockgen@latest
-	@echo "Generating mocks..."
-	$(MOCKGEN) -source=internal/service/wallet.go -destination=internal/mocks/wallet_service.go -package=mocks WalletService
-	$(MOCKGEN) -source=internal/service/wallet.go -destination=internal/mocks/wallet_repository.go -package=mocks WalletRepository
-	@echo "Done"
+generate: ## Установить mockgen и сгенерировать моки из интерфейсов
+	@echo "Установка mockgen..."
+	@if [ ! -x "$(MOCKGEN)" ] || [ "$$($(MOCKGEN) -version)" != "$(MOCKGEN_VERSION)" ]; then \
+		go install go.uber.org/mock/mockgen@$(MOCKGEN_VERSION); \
+	fi
+	@echo "Генерация моков..."
+	$(MOCKGEN) -destination=internal/mocks/wallet_service.go -package=mocks $(SERVICE_PACKAGE) WalletService
+	$(MOCKGEN) -destination=internal/mocks/wallet_repository.go -package=mocks $(SERVICE_PACKAGE) WalletRepository
+	@echo "Готово"
 
-test-unit: ## Run unit tests (handler + service)
-	@echo "Running unit tests..."
+test-unit: ## Запустить модульные тесты (обработчики + сервисы)
+	@echo "Запуск модульных тестов..."
 	go test ./internal/handler/... ./internal/service/... -v -count=1 -race
 
-test-integration: ## Run integration tests (requires test database)
-	@echo "Running integration tests..."
-	go test ./internal/repository/... -v -count=1 -race -tags=integration
+test-integration: db-test-up ## Запустить интеграционные тесты (поднимает тестовую БД)
+	@set -e; \
+		trap 'status=$$?; docker compose --profile test stop postgres-test || true; docker compose --profile test rm -f postgres-test || true; exit $$status' EXIT; \
+		echo "Запуск интеграционных тестов..."; \
+		go test ./internal/repository/... -v -count=1 -race -tags=integration
 
-test-all: generate test-unit test-integration ## Run all tests (generate mocks first)
+test-all: generate test-unit test-integration ## Сгенерировать моки и запустить все тесты
 
-test: test-unit ## Alias for unit tests (default)
+coverage: generate db-test-up ## Запустить все тесты и вывести суммарное покрытие
+	@set -e; \
+		trap 'status=$$?; docker compose --profile test stop postgres-test || true; docker compose --profile test rm -f postgres-test || true; exit $$status' EXIT; \
+		echo "Запуск модульных тестов с покрытием..."; \
+		mkdir -p $(COVERAGE_DIR); \
+		go test ./internal/handler/... ./internal/service/... -count=1 -race \
+			-coverprofile=$(COVERAGE_DIR)/unit.out -covermode=atomic; \
+		echo "Запуск интеграционных тестов с покрытием..."; \
+		go test ./internal/repository/... -count=1 -race -tags=integration \
+			-coverprofile=$(COVERAGE_DIR)/integration.out -covermode=atomic; \
+		echo "---"; \
+		echo "Объединение профилей покрытия..."; \
+		head -1 $(COVERAGE_DIR)/unit.out > $(COVERAGE_DIR)/combined.out; \
+		tail -n +2 $(COVERAGE_DIR)/unit.out >> $(COVERAGE_DIR)/combined.out; \
+		tail -n +2 $(COVERAGE_DIR)/integration.out >> $(COVERAGE_DIR)/combined.out; \
+		go tool cover -func=$(COVERAGE_DIR)/combined.out | grep total
 
-coverage-unit: generate ## Run unit tests with coverage report
-	@echo "Running unit tests with coverage..."
-	@mkdir -p $(COVERAGE_DIR)
-	go test ./internal/handler/... ./internal/service/... -count=1 -race \
-		-coverprofile=$(COVERAGE_DIR)/unit.out -covermode=atomic
-	@go tool cover -func=$(COVERAGE_DIR)/unit.out | grep total
-
-coverage-integration: ## Run integration tests with coverage report
-	@echo "Running integration tests with coverage..."
-	@mkdir -p $(COVERAGE_DIR)
-	go test ./internal/repository/... -count=1 -race -tags=integration \
-		-coverprofile=$(COVERAGE_DIR)/integration.out -covermode=atomic
-	@go tool cover -func=$(COVERAGE_DIR)/integration.out | grep total
-
-coverage: coverage-unit coverage-integration ## Run all tests with combined coverage report
-	@echo "---"
-	@echo "Merging coverage profiles..."
-	@head -1 $(COVERAGE_DIR)/unit.out > $(COVERAGE_DIR)/combined.out
-	@tail -n +2 $(COVERAGE_DIR)/unit.out >> $(COVERAGE_DIR)/combined.out
-	@tail -n +2 $(COVERAGE_DIR)/integration.out >> $(COVERAGE_DIR)/combined.out
-	@go tool cover -func=$(COVERAGE_DIR)/combined.out | grep total
-
-coverage-html: coverage ## Generate HTML coverage report and open in browser
-	@go tool cover -html=$(COVERAGE_DIR)/combined.out -o $(COVERAGE_DIR)/coverage.html
-	@echo "HTML report: $(COVERAGE_DIR)/coverage.html"
-
-lint: ## Run golangci-lint
-	@echo "Running linter..."
+lint: ## Запустить golangci-lint
+	@echo "Запуск линтера..."
 	golangci-lint run ./...
 
-clean: ## Clean build and coverage artifacts
-	@echo "Cleaning..."
+clean: ## Очистить артефакты сборки и покрытия
+	@echo "Очистка..."
 	@rm -rf $(BUILD_DIR) $(COVERAGE_DIR)
-	@echo "Done"
+	@echo "Готово"
 
-db-up: ## Start PostgreSQL
+db-up: ## Запустить PostgreSQL
 	docker compose up -d postgres
 
-db-down: ## Stop PostgreSQL
+db-down: ## Остановить PostgreSQL
 	docker compose stop postgres
 
-db-test-up: ## Start test PostgreSQL on port 5433
-	docker compose -f docker compose.test.yml up -d
+db-test-up: ## Запустить тестовую PostgreSQL на порту 5433
+	docker compose --profile test up -d --wait postgres-test
 
-db-test-down: ## Stop test PostgreSQL
-	docker compose -f docker compose.test.yml down
+db-test-down: ## Остановить тестовую PostgreSQL
+	docker compose --profile test stop postgres-test
+	docker compose --profile test rm -f postgres-test

@@ -11,10 +11,10 @@ import (
 	"go.uber.org/mock/gomock"
 	"go.uber.org/zap"
 
-	apperrors "https://github.com/DanilaBorz/testovoe-itk/internal/errors"
-	"https://github.com/DanilaBorz/testovoe-itk/internal/mocks"
-	"https://github.com/DanilaBorz/testovoe-itk/internal/model"
-	"https://github.com/DanilaBorz/testovoe-itk/internal/service"
+	apperrors "github.com/DanilaBorz/testovoe-itk/internal/errors"
+	"github.com/DanilaBorz/testovoe-itk/internal/mocks"
+	"github.com/DanilaBorz/testovoe-itk/internal/model"
+	"github.com/DanilaBorz/testovoe-itk/internal/service"
 )
 
 func setupServiceTest(t *testing.T) (*mocks.MockWalletRepository, service.WalletService) {

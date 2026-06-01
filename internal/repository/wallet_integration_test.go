@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 
-	apperrors "https://github.com/DanilaBorz/testovoe-itk/internal/errors"
-	"https://github.com/DanilaBorz/testovoe-itk/internal/repository"
+	apperrors "github.com/DanilaBorz/testovoe-itk/internal/errors"
+	"github.com/DanilaBorz/testovoe-itk/internal/repository"
 )
 
 type WalletRepositoryTestSuite struct {

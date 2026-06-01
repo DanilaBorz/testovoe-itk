@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
-	apperrors "https://github.com/DanilaBorz/testovoe-itk/internal/errors"
+	apperrors "github.com/DanilaBorz/testovoe-itk/internal/errors"
 )
 
 // WalletRepo реализует интерфейс service.WalletRepository.

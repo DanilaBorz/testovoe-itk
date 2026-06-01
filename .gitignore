@@ -1,4 +1,5 @@
-# Binaries
+# Бинарные файлы
+bin/
 *.exe
 *.exe~
 *.dll
@@ -8,17 +9,20 @@
 *.out
 /tmp/
 
-# Go workspace
+# Покрытие
+coverage/
+
+# Рабочая область Go
 go.work
 go.work.sum
 
-# IDE
+# Редакторы
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# OS
+# Операционная система
 .DS_Store
 Thumbs.db
 
