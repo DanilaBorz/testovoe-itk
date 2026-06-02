@@ -72,29 +72,29 @@ REST-сервис для управления кошельками с подде
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    HTTP (chi router)                     │
+│                    HTTP (chi router)                    │
 │  POST /api/v1/wallet  │  GET /api/v1/wallets/{id}       │
 └───────────────────────┬─────────────────────────────────┘
                         │
 ┌───────────────────────▼─────────────────────────────────┐
-│                    Handler (handler/)                     │
-│              Валидация запроса, формирование ответа       │
-│              Зависит только от: service.WalletService     │
-│              и apperrors                                  │
+│                    Handler (handler/)                   │
+│              Валидация запроса, формирование ответа     │
+│              Зависит только от: service.WalletService   │
+│              и apperrors                                │
 └───────────────────────┬─────────────────────────────────┘
                         │
 ┌───────────────────────▼─────────────────────────────────┐
-│                    Service (service/)                     │
-│              Бизнес-логика: DEPOSIT → +amount             │
-│              WITHDRAW → -amount                           │
-│              Определяет: WalletRepository (интерфейс)     │
+│                    Service (service/)                   │
+│              Бизнес-логика: DEPOSIT → +amount           │
+│              WITHDRAW → -amount                         │
+│              Определяет: WalletRepository (интерфейс)   │
 └───────────────────────┬─────────────────────────────────┘
                         │
 ┌───────────────────────▼─────────────────────────────────┐
-│                  Repository (repository/)                 │
-│              Работа с PostgreSQL, атомарные               │
-│              INSERT ... ON CONFLICT и UPDATE              │
-│              Реализует: service.WalletRepository          │
+│                  Repository (repository/)               │
+│              Работа с PostgreSQL, атомарные             │
+│              INSERT ... ON CONFLICT и UPDATE            │
+│              Реализует: service.WalletRepository        │
 └─────────────────────────────────────────────────────────┘
 ```
 
