@@ -2,15 +2,13 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: wallet-db
-    environment:
-      POSTGRES_USER: wallet_user
-      POSTGRES_PASSWORD: wallet_pass
-      POSTGRES_DB: wallet_db
+    env_file:
+      - config.env
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U wallet_user -d wallet_db"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -20,16 +18,14 @@ services:
     container_name: wallet-db-test
     profiles:
       - test
-    environment:
-      POSTGRES_USER: wallet_test
-      POSTGRES_PASSWORD: wallet_test_pass
-      POSTGRES_DB: wallet_test_db
+    env_file:
+      - config.test.env
     ports:
       - "5433:5432"
     volumes:
       - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U wallet_test -d wallet_test_db"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 3s
       timeout: 3s
       retries: 10
